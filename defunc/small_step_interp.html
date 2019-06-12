@@ -1,0 +1,215 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<link rel="stylesheet" href="style.css" type="text/css">
+<title>small_step_interp.html</title>
+</head>
+<body>
+<p>Proof by Defunctionalization <a href="index.html">index</a></p>
+<hr>
+<div class="why3doc">
+<pre><span class="comment">(*
+type exp =
+  | Const int
+  | Sub exp exp
+
+type context = exp -&gt; exp
+
+function eval (e: exp) : int = match e with
+  | Const n -&gt; n
+  | Sub e1 e2 -&gt;
+     (eval e1) - (eval e2)
+  end
+
+predicate is_redex (e: exp) = match e with
+  | Sub (Const _) (Const _) -&gt; true
+  | _ -&gt; false
+  end
+
+let head_reduction (e: exp) : exp
+  requires { is_redex e }
+  ensures  { eval result = eval e }
+= match e with
+  | Sub (Const v1) (Const v2) -&gt;
+     Const (v1 - v2)
+  | _ -&gt; absurd
+  end
+
+predicate is_value (e: exp) = match e with
+  | Const _ -&gt; true
+  | _ -&gt; false
+  end
+
+(* given an expression calculate the corresponding reduction context *)
+let rec decompose_term (e: exp) (c: context) : (contex, exp)
+  requires { not (is_value e) }
+  returns  { let (c&#39;, e&#39;) = result in
+               is_redex e&#39; &amp;&amp; forall res.post c e res -&gt; post c&#39; e&#39; res }
+= match e with
+  | Const _ -&gt;
+     (* a value is not a hole *)
+     assert false
+  | Sub (Const v1, Const v2) as e -&gt;
+     (* this exp can be head-reduced so it is a whole hole *)
+     (c, e)
+  | Sub (Const v1, e) -&gt;
+     (* this exp corresponds to a right application context *)
+     decompose_term e (fun x -&gt; ensures { post c (Sub (Const v) x) result } c (Sub (Const v) x))
+  | Sub (e1, e2) -&gt;
+     (* this expression corresponds to a left application context *)
+     decompose_term e1 (fun x -&gt; ensures { post c (Sub x e) result } c (Sub x e2))
+
+let decompose (e: exp) : (context, exp)
+  requires { not (is_value e) }
+  ensures  { let (c&#39;, e&#39;) = result in is_redex e&#39; &amp;&amp; post c&#39; e&#39; e }
+= decompose_term (fun x -&gt; x) e
+
+let red (e: exp) : int
+  ensures { result = eval e }
+= match e with
+  | Const v -&gt; v
+  | _ -&gt;
+     let (c, r) = decompose e in
+     let     r&#39; = head_reduction r in
+     red (c r&#39;)
+*)</span>
+
+<span class="keyword1">module</span> <a name="Exp_">Exp</a>
+
+  <span class="keyword1">use</span> <span class="keyword1">export</span> int.<a href="int.html#Int_">Int</a>
+
+  <span class="keyword1">type</span> <a name="exp_71">exp</a> =
+    | <a name="Const_72">Const</a> int
+    | <a name="Sub_73">Sub</a> exp exp
+
+  <span class="keyword1">type</span> <a name="prog_75">prog</a> = <a href="#exp_71">exp</a>
+
+<span class="keyword1">end</span>
+
+<span class="keyword1">module</span> <a name="DirecSem_">DirecSem</a>
+
+  <span class="keyword1">use</span> <a href="#Exp_">Exp</a>
+
+  <span class="keyword1">function</span> <a name="eval_83">eval</a> (e: <a href="#exp_71">exp</a>) : int = <span class="keyword1">match</span> e <span class="keyword1">with</span>
+    | <a href="#Const_72">Const</a> n -&gt; n
+    | <a href="#Sub_73">Sub</a> e1 e2 -&gt;
+       (<a href="#eval_83">eval</a> e1) <a href="int.html#infix%20-_23">-</a> (<a href="#eval_83">eval</a> e2)
+    <span class="keyword1">end</span>
+
+<span class="keyword1">end</span>
+
+<span class="keyword1">module</span> <a name="ReductionSemantics_">ReductionSemantics</a>
+
+  <span class="keyword1">use</span> <a href="#Exp_">Exp</a>
+  <span class="keyword1">use</span> <a href="#DirecSem_">DirecSem</a>
+
+  <span class="keyword1">predicate</span> <a name="is_value_96">is_value</a> (e: <a href="#exp_71">exp</a>) = <span class="keyword1">match</span> e <span class="keyword1">with</span>
+    | <a href="#Const_72">Const</a> _ -&gt; <span class="keyword1">true</span>
+    | _ -&gt; <span class="keyword1">false</span>
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">predicate</span> <a name="is_redex_101">is_redex</a> (e: <a href="#exp_71">exp</a>) = <span class="keyword1">match</span> e <span class="keyword1">with</span>
+    | <a href="#Sub_73">Sub</a> (<a href="#Const_72">Const</a> _) (<a href="#Const_72">Const</a> _) -&gt; <span class="keyword1">true</span>
+    | _ -&gt; <span class="keyword1">false</span>
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">let</span> <a name="head_reduction_106">head_reduction</a> (e: <a href="#exp_71">exp</a>) : <a href="#exp_71">exp</a>
+    <span class="keyword2">requires</span> { <a href="#is_redex_101">is_redex</a> e }
+    <span class="keyword2">ensures</span>  { <a href="#eval_83">eval</a> result = <a href="#eval_83">eval</a> e }
+  = <span class="keyword1">match</span> e <span class="keyword1">with</span>
+    | <a href="#Sub_73">Sub</a> (<a href="#Const_72">Const</a> v1) (<a href="#Const_72">Const</a> v2) -&gt;
+       <a href="#Const_72">Const</a> (v1 <a href="int.html#infix%20-_23">-</a> v2)
+    | _ -&gt; <span class="keyword2">absurd</span>
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">type</span> <a name="context_115">context</a> =
+    | <a name="KHole_116">KHole</a>
+    | <a name="KApp_left_117">KApp_left</a> context <a href="#exp_71">exp</a>
+    | <a name="KApp_right_118">KApp_right</a> int context
+
+  <span class="keyword1">predicate</span> <a name="post_120">post</a> (k: <a href="#context_115">context</a>) (arg result: <a href="#exp_71">exp</a>) = <span class="keyword1">match</span> k <span class="keyword1">with</span>
+    | <a href="#KHole_116">KHole</a> -&gt; arg = result
+    | <a href="#KApp_left_117">KApp_left</a> c e -&gt; <a href="#post_120">post</a> c (<a href="#Sub_73">Sub</a> arg e) result
+    | <a href="#KApp_right_118">KApp_right</a> n c -&gt; <a href="#post_120">post</a> c (<a href="#Sub_73">Sub</a> (<a href="#Const_72">Const</a> n) arg) result
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">let</span> <span class="keyword1">rec</span> <a name="decompose_term_126">decompose_term</a> (e: <a href="#exp_71">exp</a>) (c: <a href="#context_115">context</a>) : (<a href="#context_115">context</a>, <a href="#exp_71">exp</a>)
+    <span class="keyword2">requires</span> { <span class="keyword1">not</span> (<a href="#is_value_96">is_value</a> e) }
+    <span class="keyword2">returns</span>  { (c', e') -&gt;
+                 <a href="#is_redex_101">is_redex</a> e' &amp;&amp; <span class="keyword1">forall</span> res. <a href="#post_120">post</a> c e res -&gt; <a href="#post_120">post</a> c' e' res }
+    <span class="keyword2">variant</span>  { e }
+  = <span class="keyword1">match</span> e <span class="keyword1">with</span>
+    | <a href="#Const_72">Const</a> _ -&gt;
+       <span class="keyword2">absurd</span>
+    | <a href="#Sub_73">Sub</a> (<a href="#Const_72">Const</a> _) (<a href="#Const_72">Const</a> _) -&gt;
+       (c, e)
+    | <a href="#Sub_73">Sub</a> (<a href="#Const_72">Const</a> v1) e -&gt;
+       decompose_term e (<a href="#KApp_right_118">KApp_right</a> v1 c)
+    | <a href="#Sub_73">Sub</a> e1 e2 -&gt;
+       decompose_term e1 (<a href="#KApp_left_117">KApp_left</a> c e2)
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">let</span> <a name="decompose_142">decompose</a> (e: <a href="#exp_71">exp</a>) : (<a href="#context_115">context</a>, <a href="#exp_71">exp</a>)
+    <span class="keyword2">requires</span> { <span class="keyword1">not</span> (<a href="#is_value_96">is_value</a> e) }
+    <span class="keyword2">returns</span>  { (c', e') -&gt; <a href="#post_120">post</a> c' e' e &amp;&amp; <a href="#is_redex_101">is_redex</a> e' }
+  = <a href="#decompose_term_126">decompose_term</a> e <a href="#KHole_116">KHole</a>
+
+  <span class="keyword1">let</span> <span class="keyword1">rec</span> <a name="apply_147">apply</a> (k: <a href="#context_115">context</a>) (arg: <a href="#exp_71">exp</a>) : <a href="#exp_71">exp</a>
+    <span class="keyword2">ensures</span> { <a href="#post_120">post</a> k arg result }
+    <span class="keyword2">variant</span> { k }
+  = <span class="keyword1">match</span> k <span class="keyword1">with</span>
+    | <a href="#KHole_116">KHole</a> -&gt;
+       <span class="keyword1">let</span> x = arg <span class="keyword1">in</span> x
+    | <a href="#KApp_left_117">KApp_left</a> c e -&gt;
+       <span class="keyword1">let</span> x = arg <span class="keyword1">in</span>
+       apply c (<a href="#Sub_73">Sub</a> x e)
+    | <a href="#KApp_right_118">KApp_right</a> n c -&gt;
+       <span class="keyword1">let</span> x = arg <span class="keyword1">in</span>
+       apply c (<a href="#Sub_73">Sub</a> (<a href="#Const_72">Const</a> n) x)
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">let</span> <span class="keyword1">rec</span> <span class="keyword1">lemma</span> <a name="post_eval_161">post_eval</a> (k: <a href="#context_115">context</a>) (arg1 arg2 r1 r2: <a href="#exp_71">exp</a>)
+    <span class="keyword2">requires</span> { <a href="#eval_83">eval</a> arg1 = <a href="#eval_83">eval</a> arg2 }
+    <span class="keyword2">requires</span> { <a href="#post_120">post</a> k arg1 r1 &amp;&amp; <a href="#post_120">post</a> k arg2 r2 }
+    <span class="keyword2">ensures</span>  { <a href="#eval_83">eval</a> r1 = <a href="#eval_83">eval</a> r2 }
+    <span class="keyword2">variant</span>  { k }
+  = <span class="keyword1">match</span> k <span class="keyword1">with</span>
+    | <a href="#KHole_116">KHole</a> -&gt; ()
+    | <a href="#KApp_left_117">KApp_left</a> c e -&gt;
+       post_eval c (<a href="#Sub_73">Sub</a> arg1 e) (<a href="#Sub_73">Sub</a> arg2 e) r1 r2
+    | <a href="#KApp_right_118">KApp_right</a> n c -&gt;
+       post_eval c (<a href="#Sub_73">Sub</a> (<a href="#Const_72">Const</a> n) arg1) (<a href="#Sub_73">Sub</a> (<a href="#Const_72">Const</a> n) arg2) r1 r2
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">let</span> <span class="keyword1">rec</span> <a name="red_174">red</a> (e: <a href="#exp_71">exp</a>) : int
+    <span class="keyword2">ensures</span> { result = <a href="#eval_83">eval</a> e }
+    <span class="keyword2">diverges</span>
+  = <span class="keyword1">match</span> e <span class="keyword1">with</span>
+    | <a href="#Const_72">Const</a> v -&gt; v
+    | _ -&gt;
+       <span class="keyword1">let</span> (cxt, e') = <a href="#decompose_142">decompose</a> e <span class="keyword1">in</span>
+       <span class="keyword1">let</span>       r' = <a href="#head_reduction_106">head_reduction</a> e' <span class="keyword1">in</span>
+       red (<a href="#apply_147">apply</a> cxt r')
+    <span class="keyword1">end</span>
+
+<span class="keyword1">end</span></pre>
+
+</div>
+
+<h1>Why3 Proof Results for Project "small_step_interp"</h1>
+<h2><span style="color:#008000">Theory "small_step_interp.ReductionSemantics": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="1">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.0</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">VC for head_reduction</td><td style="background-color:#C0FFC0">0.02</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">VC for decompose_term</td><td style="background-color:#C0FFC0">0.09</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">VC for decompose</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">VC for apply</td><td style="background-color:#C0FFC0">0.02</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">VC for post_eval</td><td style="background-color:#C0FFC0">0.02</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="1">VC for red</td><td style="background-color:#C0FFC0">0.01</td></tr>
+</table>
+
+<hr>
+<p>Generated by why3doc 1.2.0+git</p>
+</body>
+</html>

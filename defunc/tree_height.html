@@ -1,0 +1,101 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<link rel="stylesheet" href="style.css" type="text/css">
+<title>tree_height.html</title>
+</head>
+<body>
+<p>Proof by Defunctionalization <a href="index.html">index</a></p>
+<hr>
+<div class="why3doc">
+<pre><span class="comment">(*
+  let rec heigth (t: tree &#39;a) (k: int -&gt; &#39;b) : &#39;b
+    ensures { post k (heigth t) result }
+  = match t with
+    | Empty -&gt; k 0
+    | Node l x r -&gt;
+       heigth l (fun hl -&gt; ensures { post k (1 + max hl (height r)) result }
+       heigth r (fun hr -&gt; ensures { post k (1 + max hl hr) result }
+         k (1 + max hl hr)))
+    end
+
+  let main (t: tree &#39;a) : int = heigth t (fun x -&gt; x)
+*)</span>
+
+<span class="keyword1">module</span> <a name="TreeHeight_">TreeHeight</a>
+
+  <span class="keyword1">use</span> bintree.<a href="bintree.html#Tree_">Tree</a>, bintree.<a href="bintree.html#Height_">Height</a>
+  <span class="keyword1">use</span> int.<a href="int.html#MinMax_">MinMax</a>, int.<a href="int.html#Int_">Int</a>
+
+  <span class="keyword1">type</span> <a name="kont_20">kont</a> 'a =
+    | <a name="Kid_21">Kid</a>
+    | <a name="Kleft_22">Kleft</a> (<a href="bintree.html#tree_6">tree</a> 'a) (kont 'a)
+    | <a name="Kright_23">Kright</a> int (kont 'a)
+
+  <span class="keyword1">function</span> <a name="var_tree_25">var_tree</a> (t: <a href="bintree.html#tree_6">tree</a> 'a) : int = <span class="keyword1">match</span> t <span class="keyword1">with</span>
+    | <a href="bintree.html#Empty_6">Empty</a> -&gt; 1
+    | <a href="bintree.html#Node_6">Node</a> l _ r -&gt; 3 <a href="int.html#infix%20+_19">+</a> <a href="#var_tree_25">var_tree</a> l <a href="int.html#infix%20+_19">+</a> <a href="#var_tree_25">var_tree</a> r
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">lemma</span> <a name="var_tree_nonneg_30">var_tree_nonneg</a>: <span class="keyword1">forall</span> t: <a href="bintree.html#tree_6">tree</a> 'a.
+    <a href="#var_tree_25">var_tree</a> t <a href="int.html#infix%20%3E=_26">&gt;=</a> 0
+
+  <span class="keyword1">function</span> <a name="var_kont_33">var_kont</a> (k: <a href="#kont_20">kont</a> 'a) : int = <span class="keyword1">match</span> k <span class="keyword1">with</span>
+    | <a href="#Kid_21">Kid</a> -&gt; 0
+    | <a href="#Kleft_22">Kleft</a> r k -&gt; 2 <a href="int.html#infix%20+_19">+</a> <a href="#var_tree_25">var_tree</a> r <a href="int.html#infix%20+_19">+</a> <a href="#var_kont_33">var_kont</a> k
+    | <a href="#Kright_23">Kright</a> _ k -&gt; 1 <a href="int.html#infix%20+_19">+</a> <a href="#var_kont_33">var_kont</a> k
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">lemma</span> <a name="var_kont_k_nonneg_39">var_kont_k_nonneg</a>: <span class="keyword1">forall</span> k: <a href="#kont_20">kont</a> 'a.
+    <a href="#var_kont_33">var_kont</a> k <a href="int.html#infix%20%3E=_26">&gt;=</a> 0
+
+  <span class="keyword1">predicate</span> <a name="post_42">post</a> (k: <a href="#kont_20">kont</a> 'a) (arg res: int) = <span class="keyword1">match</span> k <span class="keyword1">with</span>
+     | <a href="#Kid_21">Kid</a> -&gt; arg = res
+     | <a href="#Kleft_22">Kleft</a> r k' -&gt; <a href="#post_42">post</a> k' (1 <a href="int.html#infix%20+_19">+</a> <a href="int.html#max_148">max</a> arg (<a href="bintree.html#height_60">height</a> r)) res
+     | <a href="#Kright_23">Kright</a> hl k' -&gt; <a href="#post_42">post</a> k' (1 <a href="int.html#infix%20+_19">+</a> <a href="int.html#max_148">max</a> hl arg) res
+     <span class="keyword1">end</span>
+
+  <span class="keyword1">let</span> <span class="keyword1">rec</span> <a name="height_48">height</a> (t: <a href="bintree.html#tree_6">tree</a> 'a) (k: <a href="#kont_20">kont</a> 'a) : int
+    <span class="keyword2">variant</span> { <a href="#var_tree_25">var_tree</a> t <a href="int.html#infix%20+_19">+</a> <a href="#var_kont_33">var_kont</a> k }
+    <span class="keyword2">ensures</span> { <a href="#post_42">post</a> k (<a href="bintree.html#height_60">height</a> t) result }
+  = <span class="keyword1">match</span> t <span class="keyword1">with</span>
+    | <a href="bintree.html#Empty_6">Empty</a> -&gt; apply k 0
+    | <a href="bintree.html#Node_6">Node</a> l _ r -&gt; height l (<a href="#Kleft_22">Kleft</a> r k)
+    <span class="keyword1">end</span>
+  <span class="keyword1">with</span> <a name="apply_55">apply</a> (k: <a href="#kont_20">kont</a> 'a) (arg: int) : int
+    <span class="keyword2">variant</span>  { <a href="#var_kont_33">var_kont</a> k }
+    <span class="keyword2">ensures</span>  { <a href="#post_42">post</a> k arg result }
+  = <span class="keyword1">match</span> k <span class="keyword1">with</span>
+    | <a href="#Kid_21">Kid</a> -&gt; arg
+    | <a href="#Kleft_22">Kleft</a> r k -&gt; height r (<a href="#Kright_23">Kright</a> arg k)
+    | <a href="#Kright_23">Kright</a> hl k -&gt; apply k (1 <a href="int.html#infix%20+_19">+</a> <a href="int.html#max_65">max</a> hl arg)
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">let</span> <a name="main_64">main</a> (t: <a href="bintree.html#tree_6">tree</a> 'a) : int
+    <span class="keyword2">ensures</span> { result = <a href="#height_48">height</a> t }
+  = <a href="#height_48">height</a> t <a href="#Kid_21">Kid</a>
+
+<span class="keyword1">end</span></pre>
+
+</div>
+
+<h1>Why3 Proof Results for Project "tree_height"</h1>
+<h2><span style="color:#008000">Theory "tree_height.TreeHeight": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="2">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.0</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">var_tree_nonneg</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">induction_ty_lex</td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">var_tree_nonneg.0</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">var_kont_k_nonneg</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">induction_ty_lex</td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">var_kont_k_nonneg.0</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for height</td><td style="background-color:#C0FFC0">0.02</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for apply</td><td style="background-color:#C0FFC0">0.02</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for main</td><td style="background-color:#C0FFC0">0.01</td></tr>
+</table>
+
+<hr>
+<p>Generated by why3doc 1.2.0+git</p>
+</body>
+</html>

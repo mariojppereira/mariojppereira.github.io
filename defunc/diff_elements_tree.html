@@ -1,0 +1,135 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<link rel="stylesheet" href="style.css" type="text/css">
+<title>diff_elements_tree.html</title>
+</head>
+<body>
+<div class="why3doc">
+<pre><span class="comment">(*
+  let n_distinct_elements (t: tree &#39;a) : int
+    ensures { result = cardinal (set_of_tree t empty) }
+  = let h = ref empty in
+    let rec distinct_elements_loop (t: tree &#39;a) (k: unit -&gt; unit) : unit
+      ensures { post k () (set_of_tree t (old !h)) !h () }
+    = match t with
+      | Empty -&gt; k ()
+      | Node l x r -&gt;
+         h := add x !h;
+         distinct_elements_loop l (fun () -&gt;
+           ensures { post k () (set_of_tree r (old !h)) !h () }
+         distinct_elements_loop r (fun () -&gt;
+           ensures { post k () (old !h) !h () }
+           k ()))
+      end
+    in
+    distinct_elements_loop t (fun x -&gt; x);
+    cardinal !h
+*)</span>
+
+<span class="keyword1">module</span> <a name="DiffElementsCPS_">DiffElementsCPS</a>
+
+  <span class="keyword1">use</span> set.<a href="set.html#Fset_">Fset</a>
+  <span class="keyword1">use</span> ref.<a href="ref.html#Ref_">Ref</a>
+  <span class="keyword1">use</span> bintree.<a href="bintree.html#Tree_">Tree</a>
+  <span class="keyword1">use</span> int.<a href="int.html#Int_">Int</a>
+
+  <span class="keyword1">function</span> <a name="set_of_tree_29">set_of_tree</a> (t: <a href="bintree.html#tree_6">tree</a> 'a) (s: <a href="set.html#fset_238">fset</a> 'a) : <a href="set.html#fset_238">fset</a> 'a =
+    <span class="keyword1">match</span> t <span class="keyword1">with</span>
+    | <a href="bintree.html#Empty_6">Empty</a> -&gt; s
+    | <a href="bintree.html#Node_6">Node</a> l x r -&gt;
+       <span class="keyword1">let</span> s1 = <a href="#set_of_tree_29">set_of_tree</a> l (<a href="set.html#add_273">add</a> x s) <span class="keyword1">in</span>
+       <a href="#set_of_tree_29">set_of_tree</a> r s1
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">function</span> <a name="n_set_of_tree_37">n_set_of_tree</a> (t: <a href="bintree.html#tree_6">tree</a> 'a) : int =
+    <a href="set.html#cardinal_364">cardinal</a> (<a href="#set_of_tree_29">set_of_tree</a> t <a href="set.html#empty_264">empty</a>)
+
+  <span class="keyword1">type</span> <a name="kont_40">kont</a> 'a =
+    | <a name="Kid_41">Kid</a>
+    | <a name="Kleft_42">Kleft</a> (<a href="bintree.html#tree_6">tree</a> 'a) (kont 'a)
+    | <a name="Kright_43">Kright</a> (kont 'a)
+
+  <span class="keyword1">type</span> <a name="state_45">state</a> 'a = <a href="set.html#fset_238">fset</a> 'a
+
+  <span class="keyword1">predicate</span> <a name="post_47">post</a> (k: <a href="#kont_40">kont</a> 'a) (arg: unit) (old_s cur_s: <a href="#state_45">state</a> 'a) (res: unit) =
+    <span class="keyword1">match</span> k <span class="keyword1">with</span>
+    | <a href="#Kid_41">Kid</a> -&gt;
+       old_s <a href="set.html#infix%20==_247">==</a> cur_s
+    | <a href="#Kleft_42">Kleft</a> r k -&gt;
+       <a href="#post_47">post</a> k arg (<a href="#set_of_tree_29">set_of_tree</a> r old_s) cur_s res
+    | <a href="#Kright_43">Kright</a> k -&gt;
+       <a href="#post_47">post</a> k arg old_s cur_s res
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">function</span> <a name="var_tree_57">var_tree</a> (t: <a href="bintree.html#tree_6">tree</a> 'a) : int = <span class="keyword1">match</span> t <span class="keyword1">with</span>
+    | <a href="bintree.html#Empty_6">Empty</a> -&gt; 1
+    | <a href="bintree.html#Node_6">Node</a> l _ r -&gt; 3 <a href="int.html#infix%20+_19">+</a> <a href="#var_tree_57">var_tree</a> l <a href="int.html#infix%20+_19">+</a> <a href="#var_tree_57">var_tree</a> r
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">lemma</span> <a name="var_tree_nonneg_62">var_tree_nonneg</a>: <span class="keyword1">forall</span> t: <a href="bintree.html#tree_6">tree</a> 'a.
+    <a href="#var_tree_57">var_tree</a> t <a href="int.html#infix%20%3E=_26">&gt;=</a> 1
+
+  <span class="keyword1">function</span> <a name="var_kont_65">var_kont</a> (k: <a href="#kont_40">kont</a> 'a) : int = <span class="keyword1">match</span> k <span class="keyword1">with</span>
+    | <a href="#Kid_41">Kid</a> -&gt; 0
+    | <a href="#Kleft_42">Kleft</a> r k -&gt; 2 <a href="int.html#infix%20+_19">+</a> <a href="#var_tree_57">var_tree</a> r <a href="int.html#infix%20+_19">+</a> <a href="#var_kont_65">var_kont</a> k
+    | <a href="#Kright_43">Kright</a> k -&gt; 1 <a href="int.html#infix%20+_19">+</a> <a href="#var_kont_65">var_kont</a> k
+    <span class="keyword1">end</span>
+
+  <span class="keyword1">lemma</span> <a name="var_kont_k_nonneg_71">var_kont_k_nonneg</a>: <span class="keyword1">forall</span> k: <a href="#kont_40">kont</a> 'a.
+    <a href="#var_kont_65">var_kont</a> k <a href="int.html#infix%20%3E=_26">&gt;=</a> 0
+
+  <span class="keyword1">type</span> <a name="elt_74">elt</a>
+
+  <span class="keyword1">clone</span> set.<a href="set.html#SetApp_">SetApp</a> <span class="keyword1">with</span> <span class="keyword1">type</span> <a href="set.html#elt_505">elt</a> = <a href="#elt_74">elt</a>
+
+  <span class="keyword1">let</span> <a name="n_distinct_elements_78">n_distinct_elements</a> (t: <a href="bintree.html#tree_6">tree</a> <a href="#elt_74">elt</a>) : int
+    <span class="keyword2">ensures</span> { result = <a href="#n_set_of_tree_37">n_set_of_tree</a> t }
+  = <span class="keyword1">let</span> h = ref (<a href="#empty_524">empty</a> ()) <span class="keyword1">in</span>
+    <span class="keyword1">let</span> <span class="keyword1">rec</span> distinct_elements_loop (t: <a href="bintree.html#tree_6">tree</a> <a href="#elt_74">elt</a>) (k: <a href="#kont_40">kont</a> <a href="#elt_74">elt</a>) : unit
+      <span class="keyword2">ensures</span> { <a href="#post_47">post</a> k () (<a href="#set_of_tree_29">set_of_tree</a> t (<span class="keyword1">old</span> <a href="ref.html#prefix%20!_18">!</a>h)) <a href="ref.html#prefix%20!_18">!</a>h () }
+      <span class="keyword2">variant</span> { <a href="#var_tree_57">var_tree</a> t <a href="int.html#infix%20+_19">+</a> <a href="#var_kont_65">var_kont</a> k }
+    = <span class="keyword1">match</span> t <span class="keyword1">with</span>
+      | <a href="bintree.html#Empty_6">Empty</a> -&gt; apply k ()
+      | <a href="bintree.html#Node_6">Node</a> l x r -&gt;
+         h <a href="ref.html#infix%20:=_20">:=</a> <a href="#add_531">add</a> x <a href="ref.html#prefix%20!_18">!</a>h;
+         distinct_elements_loop l (<a href="#Kleft_42">Kleft</a> r k)
+      <span class="keyword1">end</span>
+    <span class="keyword1">with</span> apply (k: <a href="#kont_40">kont</a> <a href="#elt_74">elt</a>) (arg: unit) : unit
+      <span class="keyword2">ensures</span> { <a href="#post_47">post</a> k arg (<span class="keyword1">old</span> <a href="ref.html#prefix%20!_18">!</a>h) <a href="ref.html#prefix%20!_18">!</a>h () }
+      <span class="keyword2">variant</span> { <a href="#var_kont_65">var_kont</a> k }
+    = <span class="keyword1">match</span> k <span class="keyword1">with</span>
+      | <a href="#Kid_41">Kid</a> -&gt;
+          arg
+      | <a href="#Kleft_42">Kleft</a> r k -&gt;
+         distinct_elements_loop r (<a href="#Kright_43">Kright</a> k)
+      | <a href="#Kright_43">Kright</a> k -&gt;
+         apply k arg
+      <span class="keyword1">end</span>
+    <span class="keyword1">in</span>
+    distinct_elements_loop t <a href="#Kid_41">Kid</a>;
+    <a href="#cardinal_562">cardinal</a> <a href="ref.html#prefix%20!_18">!</a>h
+
+<span class="keyword1">end</span>
+</pre>
+
+</div>
+
+<h1>Why3 Proof Results for Project "diff_elements_tree"</h1>
+<h2><span style="color:#008000">Theory "diff_elements_tree.DiffElementsCPS": fully verified</span></h2>
+<table border="1" style="border-collapse:collapse"><tr><td colspan="2">Obligations</td><td text-rotation="90">Alt-Ergo 2.3.0</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">var_tree_nonneg</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">induction_ty_lex</td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">var_tree_nonneg.0</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">var_kont_k_nonneg</td><td style="background-color:#E0E0E0">---</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">induction_ty_lex</td><td style="background-color:#E0E0E0"></td></tr>
+<tr><td rowspan="1" style="width:1ex"></td><td style="background-color:#C0FFC0" colspan="1">var_kont_k_nonneg.0</td><td style="background-color:#C0FFC0">0.01</td></tr>
+<tr><td style="background-color:#C0FFC0" colspan="2">VC for n_distinct_elements</td><td style="background-color:#C0FFC0">0.04</td></tr>
+</table>
+
+<hr>
+<p>Generated by why3doc 1.2.0+git</p>
+</body>
+</html>
