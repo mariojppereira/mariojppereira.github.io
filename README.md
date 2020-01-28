@@ -2,6 +2,12 @@ CAV 2020 Companion Artifact
 ===========================
 
 
+Keyboard Layout
+---------------
+
+The keyboard layout is initially set to `en_US`.
+
+
 Login and Password Information
 ------------------------------
 
