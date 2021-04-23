@@ -31,7 +31,7 @@ Linux Ubuntu 20.10, 64-bit
 
 CPU 2 core
 
-RAM 8 Gb
+RAM 4 Gb
 
 DISK 40 Gb
 
