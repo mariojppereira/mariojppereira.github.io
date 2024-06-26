@@ -33,7 +33,7 @@ Linux Ubuntu 24.04, 64-bit
 
 CPU 2 core
 
-RAM 4 Gb
+RAM 7 Gb
 
 DISK 40 Gb
 
